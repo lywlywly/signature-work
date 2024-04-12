@@ -1,0 +1,11 @@
+body {
+  font-family: Arial, sans-serif;
+}
+
+.container {
+  display: flex;
+  align-items: flex-start;
+}
+.text {
+  vertical-align: top;
+}
