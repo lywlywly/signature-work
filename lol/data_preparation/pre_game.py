@@ -18,7 +18,7 @@ JSON: TypeAlias = dict[str, "JSON"] | list["JSON"] | str | int | float | bool | 
 MATH_DATA_DIR: Final = "match_data"
 
 api = riot_api.ApiRequest(
-    key="RGAPI-77767ec5-577f-47e6-9b43-0e9256f56496", region=riot_api.Region.KR
+    key="RGAPI-9b11be7d-d509-405a-b6d1-3ab7be28736e", region=riot_api.Region.KR
 )
 
 # use retry decorator on the three apis
@@ -68,11 +68,13 @@ def avg_k_d_a_in_matches(match_ids: list[str], puuid: str):
 
 def k_d_a_in_match(match_id: str, puuid: str) -> tuple[int, int, int]:
     print(match_id)
-
-    match_data = cached_match_data_by_match_id(match_id)
-    if match_data["info"].get("endOfGameResult") == "Abort_Unexpected":  # type: ignore
+    try:
+        match_data = cached_match_data_by_match_id(match_id)
+        if match_data["info"].get("endOfGameResult") == "Abort_Unexpected":  # type: ignore
+            return 0, 0, 0
+    except Exception as ex:
+        print(ex)
         return 0, 0, 0
-
     participants = match_data["info"]["participants"]  # type: ignore
     assert isinstance(participants, list)
     current_player_stats_list: JSON = list(
@@ -117,7 +119,7 @@ def make_pre_game(match_data: JSON, champ_wr: dict[int, list[float]]):
     assert isinstance(team1_mastery, int)
 
     time.sleep(5)
-
+    
     team2_mastery = sum(
         retry_player_mastery_of_champion(puuid, champ_id)["championPoints"]  # type: ignore
         for puuid, champ_id in team2
@@ -175,7 +177,7 @@ def main():
     pre_game_data: list[list[str | int | float | bool]] = []
 
     count = 0
-    for x in l:
+    for x in get_local_caches():
         print(x)
         print(count)
         if count > 22:

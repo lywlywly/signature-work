@@ -8,7 +8,7 @@ import os
 from bs4 import BeautifulSoup
 from bs4.element import Tag
 
-from lol import roles
+from lol import ROLES_DIR, HTML_DIR, roles
 
 
 def find_rank_tbody(soup: BeautifulSoup):
@@ -45,13 +45,46 @@ def scrape_role(html_path: str):
 
 
 def main():
-    os.makedirs("data/roles", exist_ok=True)
-
     for role in roles:
-        d = scrape_role(f"assets/roles/{role}.html")
+        d = scrape_role(os.path.join(HTML_DIR, f"{role}.html"))
 
-        with open(f"data/roles/{role}.json", "w") as f:
+        with open(os.path.join(ROLES_DIR, f"{role}.json"), "w") as f:
             json.dump(d, f)
+
+        pos_champ_dict: dict[str, list[str]] = {}
+        pos_champ_wr_dict: dict[str, dict[str, list[float]]] = {}
+        for role in roles:
+            with open(os.path.join(ROLES_DIR, f"{role}.json"), "r") as f:
+                d: dict[str, list[float]] = json.load(f)
+                pos_champ_dict[role] = list(d.keys())
+                pos_champ_wr_dict[role] = d
+
+        with open(os.path.join(ROLES_DIR, "pos_champ_dict_opgg.json"), "w") as f:
+            json.dump(pos_champ_dict, f)
+
+        with open(os.path.join(ROLES_DIR, "pos_champ_wr_dict_opgg.json"), "w") as f:
+            json.dump(pos_champ_wr_dict, f)
+
+        champion_positions = {}
+        for position, champions in pos_champ_wr_dict.items():
+            for champion, stats in champions.items():
+                pick_rate = stats[1]
+                if champion not in champion_positions:
+                    champion_positions[champion] = (position, pick_rate)
+                else:
+                    _, max_pick_rate = champion_positions[champion]
+                    if pick_rate > max_pick_rate:
+                        champion_positions[champion] = (position, pick_rate)
+
+        result = {}
+        for champion, (position, pick_rate) in champion_positions.items():
+            result.setdefault(position, {})[champion] = [
+                pos_champ_wr_dict[position][champion][0],
+                pick_rate,
+            ]
+
+        with open(os.path.join(ROLES_DIR, "roles_highest.json"), "w") as f:
+            json.dump(result, f)
 
 
 main() if __name__ == "__main__" else None

@@ -2,12 +2,25 @@
 python3 -m lol.data_preparation.item
 """
 
+from functools import reduce
 import requests
 from bs4 import BeautifulSoup
 from bs4.element import Tag
 from lxml import etree
 import json
 import re
+import os
+
+from lol import CHAMP_ITEM_PICK_WIN_RATE, CHAMP_ITEMS_DIR, HTML_DIR, ROLES_DIR
+
+replacements = {
+    "'": "",
+    " ": "",
+    ".": "",
+    "wukong": "monkeyking",
+    "renataglasc": "renata",
+}
+
 
 def find_item_trs(soup: BeautifulSoup):
     tables = soup.find_all("table")
@@ -37,23 +50,17 @@ def extract_tr(tr: Tag):
 
 
 def main():
-    with open("data/roles/roles_highest.json", "r") as f:
+    with open(os.path.join(ROLES_DIR, "roles_highest.json"), "r") as f:
         all = json.load(f)
 
     for pos, champs in all.items():
         for champ in champs:
-            c = re.sub(
-                r"&.*",
-                "",
-                champ.lower()
-                .replace("'", "")
-                .replace(" ", "")
-                .replace(".", "")
-                .replace("wukong", "monkeyking")
-                .replace("renataglasc", "renata"),
+            c = reduce(
+                lambda acc, kv: acc.replace(*kv),
+                replacements.items(),
+                re.sub(r"&.*", "", champ.lower()),
             )
-            html = f"assets/roles/{pos}/{c}.html"
-
+            html = os.path.join(HTML_DIR, pos, f"{c}.html")
             print(html)
 
             with open(html, "r") as f:
@@ -73,7 +80,9 @@ def main():
                     float(extracted_tr[2][:-2]),
                 ]
 
-            with open(f"embedding/{champ}.json", "w") as f:
+            with open(
+                os.path.join(CHAMP_ITEM_PICK_WIN_RATE, f"{champ}.json"), "w"
+            ) as f:
                 json.dump(item_dict, f)
 
 
